@@ -3,6 +3,8 @@
 
 import sys
 
+from collections import defaultdict
+
 import numpy as np
 
 from polyglot.base import Sequence, TextFile, TextFiles
@@ -12,7 +14,7 @@ from polyglot.downloader import Downloader
 from polyglot.load import load_embeddings, load_morfessor_model
 from polyglot.mapping import CountedVocabulary
 from polyglot.mixins import BlobComparableMixin, StringlikeMixin
-from polyglot.tag import get_pos_tagger, get_ner_tagger
+from polyglot.tag import get_pos_tagger, get_transfer_pos_tagger, get_ner_tagger
 from polyglot.tokenize import SentenceTokenizer, WordTokenizer
 from polyglot.transliteration import Transliterator
 from polyglot.utils import _print
@@ -39,6 +41,7 @@ class BaseBlob(StringlikeMixin, BlobComparableMixin):
 
     self.string = self.raw
     self.__lang = None
+    self.hint_language_code = None
 
   @cached_property
   def detected_languages(self):
@@ -46,6 +49,9 @@ class BaseBlob(StringlikeMixin, BlobComparableMixin):
 
   @property
   def language(self):
+    if self.hint_language_code is not None:
+      self.__lang = Language.from_code(self.hint_language_code)
+
     if self.__lang is None:
       self.__lang = self.detected_languages.language
     return self.__lang
@@ -100,6 +106,10 @@ class BaseBlob(StringlikeMixin, BlobComparableMixin):
     return get_pos_tagger(lang=self.language.code)
 
   @cached_property
+  def transfer_pos_tagger(self):
+    return get_transfer_pos_tagger(lang=self.language.code)
+
+  @cached_property
   def morpheme_analyzer(self):
     return load_morfessor_model(lang=self.language.code)
 
@@ -145,6 +155,15 @@ class BaseBlob(StringlikeMixin, BlobComparableMixin):
     """
     tagged_words = []
     for word,t in self.pos_tagger.annotate(self.words):
+      word.pos_tag = t
+      tagged_words.append((word, t))
+    return tagged_words
+
+  @cached_property
+  def transfer_pos_tags(self):
+    """Returns  an list of tuples of the form (word, POS tag), using transfer POS tagger"""
+    tagged_words = []
+    for word,t in self.transfer_pos_tagger.annotate(self.words):
       word.pos_tag = t
       tagged_words.append((word, t))
     return tagged_words
@@ -480,8 +499,10 @@ class Text(BaseBlob):
   """.
   """
 
-  def __init__(self, text):
+  def __init__(self, text, hint_language_code=None):
     super(Text, self).__init__(text)
+
+    self.hint_language_code = hint_language_code
 
   def __str__(self):
     if len(self.raw) > 1000:

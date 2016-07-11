@@ -18,6 +18,7 @@ multilingual applications.
 
 -  Free software: GPLv3 license
 -  Documentation: http://polyglot.readthedocs.org.
+-  GitHub: https://github.com/aboSamoor/polyglot
 
 Features
 ~~~~~~~~
@@ -128,7 +129,7 @@ Named Entity Recognition
 
 .. parsed-literal::
 
-    [I-LOC([u'Gro\xdfbritannien']), I-PER([u'Gandhi'])]
+    [I-LOC([u'Gro\\xdfbritannien']), I-PER([u'Gandhi'])]
 
 
 Polarity
